@@ -1,15 +1,14 @@
 #R severity frequency plots
-install.packages("tidyverse")
 library(tidyverse)
 
 #create dataset:
 # disenroll yes no
 # female
 # plan type: a, b, c
-
+set.seed(839)
 female = rbinom(1000, 1, .6)
 sum(female)
-#597
+#590
 
 plan_type0 = runif(1000)
 plan_type1 = ifelse(plan_type0 < .6, "A", "Z")
@@ -45,8 +44,11 @@ ggplot(disenrollData, aes(x = plan_type)) +
 str(disenrollData)
 
 #calculate disenrollment rate by female
+disenrollData = disenrollData %>% mutate(disenroll = 
+                                           as.numeric(as.character(disenroll)))
+
 femDisEn = disenrollData %>% group_by(female) %>% 
-  summarise(disRate = sum(as.numeric(as.character(disenroll)))/n())
+  summarise(disRate = sum(disenroll)/n())
 
 ggplot(data = femDisEn, aes(x = female, y = disRate, group = 1)) +
   geom_line(linetype = "dashed") + geom_point() + ylim(0, 1)
@@ -58,9 +60,11 @@ ggplot(disenrollData, aes(x=female)) +
             linetype = "dashed") +
   geom_point(data = femDisEn, aes(x = female, y = disRate, group = 1))
 
+#from internet on how to set up the axes mathematically:
+#https://stackoverflow.com/questions/3099219/ggplot-with-2-y-axes-on-each-side-and-different-scales
 ylim.prim <- c(0, 600)   
 ylim.sec <- c(0, 1) 
-?diff
+
 b = diff(ylim.prim)/diff(ylim.sec)
 a = b*(ylim.prim[1] - ylim.sec[1])
 
@@ -86,8 +90,6 @@ ggplot() +
 # se = sqrt(p*q/N)
 # p is mean for data where disenroll = 1
 # q is mean for data where disenroll = 0
-disenrollData = disenrollData %>% mutate(disenroll = 
-                                           as.numeric(as.character(disenroll)))
 seDF = disenrollData %>% group_by(female) %>%
   summarize(p = sum(disenroll)/n(),
             q = 1 - sum(disenroll)/n(),
@@ -134,6 +136,14 @@ ggplot() +
   theme(
     axis.title.y = element_text(color = "grey"),
     axis.title.y.right = element_text(color = "blue"))
+
+#Idea: make it so you can change the right y-axis based on the rates
+#do the above for the plan type
+
+
+
+
+
 
 
 
