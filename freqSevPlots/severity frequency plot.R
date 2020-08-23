@@ -138,8 +138,85 @@ ggplot() +
     axis.title.y.right = element_text(color = "blue"))
 
 #Idea: make it so you can change the right y-axis based on the rates
-#do the above for the plan type
 
+#################################
+#do the above for the plan type
+#################################
+#calculate disenrollment rate by plantype
+planDisEn = disenrollData %>% group_by(plan_type) %>% 
+  summarise(disRate = sum(disenroll)/n())
+
+ggplot(data = planDisEn, aes(x = plan_type, y = disRate, group = 1)) +
+  geom_line(linetype = "dashed") + geom_point() + ylim(0, 1)
+
+# Overlay plots
+ggplot(disenrollData, aes(x=plan_type)) + 
+  geom_bar(stat="count", width=0.7, fill = "steelblue") +
+  geom_line(data = planDisEn, aes(x = plan_type, y = disRate, group = 1),
+            linetype = "dashed") +
+  geom_point(data = planDisEn, aes(x = plan_type, y = disRate, group = 1))
+
+#from internet on how to set up the axes mathematically:
+#https://stackoverflow.com/questions/3099219/ggplot-with-2-y-axes-on-each-side-and-different-scales
+ylim.prim <- c(0, 600)   
+ylim.sec <- c(0, 1) 
+
+b = diff(ylim.prim)/diff(ylim.sec)
+a = b*(ylim.prim[1] - ylim.sec[1])
+
+ggplot() + 
+  geom_bar(data = disenrollData, aes(x=female),
+           stat="count", width=0.7, fill = "steelblue") +
+  geom_line(data = planDisEn, aes(x = female, y = a + disRate*b, group = 1),
+            linetype = "dashed") +
+  geom_point(data = planDisEn, aes(x = female, y = a + disRate*b, group = 1)) +
+  scale_y_continuous(name = "Count",
+                     sec.axis = sec_axis(~ (. - a)/b, name = "% Disenroll",
+                                         labels = function(x) {
+                                           paste0(round(x * 100, 0), "%")
+                                         }
+                     )
+  ) +
+  theme(axis.title.y.left = element_text(color = "steelblue"),
+        axis.text.y.left = element_text(color = "steelblue")
+  )
+
+
+
+# se = sqrt(p*q/N)
+# p is mean for data where disenroll = 1
+# q is mean for data where disenroll = 0
+sePlanDF = disenrollData %>% group_by(plan_type) %>%
+  summarize(p = sum(disenroll)/n(),
+            q = 1 - sum(disenroll)/n(),
+            var = p*q,
+            sd = sqrt(p*q),
+            se = sqrt(var/n()))
+
+ggplot() + 
+  geom_bar(data = disenrollData, aes(x=plan_type),
+           stat="count", width=0.7, fill = "steelblue") +
+  geom_line(data = planDisEn, aes(x = plan_type, y = a + disRate*b, group = 1),
+            linetype = "dashed") +
+  geom_point(data = planDisEn, aes(x = plan_type, y = a + disRate*b, group = 1)) + 
+  geom_errorbar(data = planDisEn,
+                aes(x = plan_type, y = a + disRate*b,
+                    ymin = a + (disRate - 2*sePlanDF$se)*b, 
+                    ymax = a + (disRate + 2*sePlanDF$se)*b,
+                    width = .1
+                    # position = position_dodge(.9)
+                )
+  ) +
+  scale_y_continuous(name = "Count",
+                     sec.axis = sec_axis(~ (. - a)/b, name = "% Disenroll",
+                                         labels = function(x) {
+                                           paste0(round(x * 100, 0), "%")
+                                         }
+                     )
+  ) +
+  theme(axis.title.y.left = element_text(color = "steelblue"),
+        axis.text.y.left = element_text(color = "steelblue")
+  ) 
 
 
 
