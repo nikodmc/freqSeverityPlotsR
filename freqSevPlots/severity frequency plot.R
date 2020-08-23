@@ -220,6 +220,73 @@ ggplot() +
 
 
 
+#make it a function
+freqSevPlot = function(DF, var, outcome) {
+  # DF = "disenrollData"
+  # var = "plan_type"
+  # outcome = "disenroll"
+  varRate = get(DF) %>% group_by(get(var)) %>% 
+    summarise(disRate = sum(get(outcome))/n(), count = n())
+
+  colnames(varRate)[1] = "varName"
+  
+  # ylim.prim <- c(0, 600)   
+  # ylim.sec <- c(0, 1) 
+  ylim.prim <- c(0, max(varRate$count))   
+  ylim.sec <- c(0, max(varRate$disRate)) 
+  
+  
+  b = diff(ylim.prim)/diff(ylim.sec)
+  a = b*(ylim.prim[1] - ylim.sec[1])
+  
+  # se = sqrt(p*q/N)
+  # p is mean for data where disenroll = 1
+  # q is mean for data where disenroll = 0
+  seDF = get(DF) %>% group_by(get(var)) %>%
+    summarize(p = sum(get(outcome))/n(),
+              q = 1 - sum(get(outcome))/n(),
+              var = p*q,
+              sd = sqrt(p*q),
+              se = sqrt(var/n()))
+  
+  ggplot() + 
+    geom_bar(data = get(DF), aes(x=get(var)),
+             stat="count", width=0.7, fill = "steelblue") +
+    geom_line(data = varRate, aes(x = varName, y = a + disRate*b, group = 1),
+              linetype = "dashed") +
+    geom_point(data = varRate, aes(x = varName, y = a + disRate*b, group = 1)) + 
+    geom_errorbar(data = varRate,
+                  aes(x = varName, y = a + disRate*b,
+                      ymin = a + (disRate - 2*seDF$se)*b, 
+                      ymax = a + (disRate + 2*seDF$se)*b,
+                      width = .1
+                      # position = position_dodge(.9)
+                  )
+    ) +
+    scale_y_continuous(name = "Count",
+                       sec.axis = sec_axis(~ (. - a)/b, name = "% Disenroll",
+                                           labels = function(x) {
+                                             paste0(round(x * 100, 0), "%")
+                                           }
+                       )
+    ) +
+    theme(title = var
+          axis.title.y.left = element_text(color = "steelblue"),
+          axis.text.y.left = element_text(color = "steelblue")
+    ) 
+  
+}
+
+# DF = "disenrollData"
+# var = "plan_type"
+# outcome = "disenroll"
+freqSevPlot("disenrollData", "plan_type", "disenroll")
+freqSevPlot("disenrollData", "female", "disenroll")
+
+
+
+
+
 
 
 
